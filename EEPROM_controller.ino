@@ -46,12 +46,12 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("Insert operation mode (1-READ or 2-WRITE).");
+  Serial.println("Insert operation mode (1-READ or 2-WRITE or 3-SELECTOR).");
   Serial.read(); // buffer clear //
   while(!Serial.available());
   String r = Serial.readString(); r.trim();
 
-  if(r == "1" || r == "read" || r == "r" || r == "rd")
+  if (r == "1" || r == "read" || r == "r" || r == "rd")
   {
     currentMode = 1;
     printMode(currentMode);
@@ -76,10 +76,15 @@ void loop() {
     Serial.print(readData);
     Serial.println(" from the specified address.");
   }
-  else if(r == "2" || r == "write" || r == "w" || r == "wr")
+  else if (r == "2" || r == "write" || r == "w" || r == "wr")
   {
     currentMode = 2;
     writeRom();
+  }
+  else if (r == "3" || r == "address" || r == "selector")
+  {
+    currentMode = 3;
+    selector();
   }
   else
   {
@@ -204,6 +209,34 @@ long readRom(int address[]) {
   return readData;
 }
 
+void selector() {
+  printMode(currentMode);
+  Serial.println("Insert decimal address to select.");
+  while(Serial.available()) Serial.read();
+  while(!Serial.available());
+  int address = Serial.parseInt(), ad = address;
+  int binAddr[ADDR_BITS]; ///
+  for(int i = 0; i < ADDR_BITS; i++)
+  {
+    binAddr[ADDR_BITS-i-1] = ad % 2;
+    ad /= 2;
+  }
+
+  Serial.print("Selecting binary address ");
+  for(int i = 0; i < ADDR_BITS; i++) Serial.print(binAddr[i]);
+  Serial.println(".");
+
+  for(int i = 0; i < DATA_BITS; i++) pinMode(dataPins[i], INPUT); // prepares to read //
+
+  for(int i = 0; i < ADDR_BITS; i++)
+    digitalWrite(addressPins[i], binAddr[i] == 1 ? HIGH : LOW);
+
+  digitalWrite(WE, HIGH);
+  digitalWrite(OE, LOW);
+  digitalWrite(CE, LOW);
+  delay(10);
+}
+
 void printMode(int mode) {
   Serial.print("<");
   String s = "CONSOLE";
@@ -219,6 +252,10 @@ void printMode(int mode) {
 
     case 2:
     s = "WRITE";
+    break;
+
+    case 3:
+    s = "SELECTOR";
     break;
 
     default:
