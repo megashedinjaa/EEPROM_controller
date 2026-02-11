@@ -34,6 +34,7 @@ void setup() {
   Serial.println();
 
   for(int i = 0; i < ADDR_BITS; i++) pinMode(addressPins[i], OUTPUT);
+  for(int i = 0; i < DATA_BITS; i++) pinMode(dataPins[i], INPUT);
 
   pinMode(CE, OUTPUT);
   pinMode(OE, OUTPUT);
@@ -113,10 +114,13 @@ int writeRom() {
   while(!Serial.available());
   String data = Serial.readString(); data.trim();
   int binData[DATA_BITS]; ///
+  Serial.print("binData = ");
   for(int i = 0; i < DATA_BITS; i++)
   {
     binData[i] = data[i] - 48; // ascii math //
+    Serial.print(binData[i]);
   }
+  Serial.println();
 
   printMode(currentMode);
   Serial.print("\nPrinting ");
@@ -124,7 +128,6 @@ int writeRom() {
   Serial.print(" on address ");
   for(int i = 0; i < ADDR_BITS; i++) Serial.print(binAddr[i]);
 
-  printMode(currentMode);
   Serial.println(".\n\nProceed? (y/n)");
   while(!Serial.available());
   String yn = Serial.readString(); yn.trim();
@@ -139,7 +142,12 @@ int writeRom() {
     digitalWrite(OE, HIGH);
     digitalWrite(WE, LOW);
     digitalWrite(CE, LOW);
-    delay(100); // chip needs a bit of time to write //
+    delay(1);
+    digitalWrite(WE, HIGH);
+    digitalWrite(CE, HIGH);
+    delay(10); // chip needs a bit of time to write //
+    for(int i = 0; i < DATA_BITS; i++) pinMode(dataPins[i], INPUT);
+    delay(10);
 
     /// check if writing succeeded ///
 
@@ -183,7 +191,7 @@ long readRom(int address[]) {
   digitalWrite(OE, LOW);
   digitalWrite(CE, LOW);
 
-  delay(100);
+  delay(10);
 
   long readData = 0;
 
