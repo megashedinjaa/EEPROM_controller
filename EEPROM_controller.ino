@@ -46,7 +46,9 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("Insert operation mode (1-READ or 2-WRITE or 3-SELECTOR).");
+  for(int i = 0; i < DATA_BITS; i++) pinMode(dataPins[i], INPUT);
+  Serial.println("Insert operation mode (1-READ or 2-WRITE or 3-SELECTOR or 4-CLOCK).");
+  for(int i = 0; i < DATA_BITS; i++) pinMode(dataPins[i], INPUT);
   Serial.read(); // buffer clear //
   while(!Serial.available());
   String r = Serial.readString(); r.trim();
@@ -86,6 +88,11 @@ void loop() {
     currentMode = 3;
     selector();
   }
+  else if (r == "4" || r == "c" || r == "clk" || r == "clock")
+  {
+    currentMode = 4;
+    clock();
+  }
   else
   {
     currentMode = 0;
@@ -119,7 +126,6 @@ int writeRom() {
   while(!Serial.available());
   String data = Serial.readString(); data.trim();
   int binData[DATA_BITS]; ///
-  Serial.print("binData = ");
   for(int i = 0; i < DATA_BITS; i++)
   {
     binData[i] = data[i] - 48; // ascii math //
@@ -127,13 +133,16 @@ int writeRom() {
   }
   Serial.println();
 
+  Serial.println();
   printMode(currentMode);
-  Serial.print("\nPrinting ");
+  Serial.print("Printing ");
   for(int i = 0; i < DATA_BITS; i++) Serial.print(binData[i]);
   Serial.print(" on address ");
   for(int i = 0; i < ADDR_BITS; i++) Serial.print(binAddr[i]);
 
-  Serial.println(".\n\nProceed? (y/n)");
+  Serial.println(".");
+  printMode(currentMode);
+  Serial.println("Proceed? (y/n)");
   while(!Serial.available());
   String yn = Serial.readString(); yn.trim();
   if(yn == "y" || yn == "Y")
@@ -237,6 +246,52 @@ void selector() {
   delay(10);
 }
 
+void clock() {
+  printMode(currentMode);
+  Serial.println("Insert pin to clock.");
+  while(Serial.available()) Serial.read();
+  while(!Serial.available());
+  int clkPin = Serial.parseInt();
+  if(clkPin < 3 || clkPin > 19)
+  {
+    printMode(currentMode);
+    Serial.print("Invalid pin: ");
+    Serial.print(clkPin);
+    Serial.println("!");
+    return;
+  }
+  else if (clkPin == 2)
+  {
+    printMode(currentMode);
+    Serial.println("Invalid pin: 2. Reserved for safety abortion.");
+  }
+  printMode(currentMode);
+  Serial.print("Selected pin ");
+  pinMode(clkPin, OUTPUT);
+  Serial.print(clkPin);
+  Serial.println(".");
+  printMode(currentMode);
+  Serial.println("Insert clock period.");
+  while(Serial.available()) Serial.read();
+  while(!Serial.available());
+  unsigned long p = Serial.parseInt();
+  while(Serial.available()) Serial.read();
+  pinMode(2, INPUT);
+  printMode(currentMode);
+  Serial.println("Send anything or bring pin 2 LOW to interrupt clocking.");
+  printMode(currentMode);
+  Serial.println("Clocking through...");
+  while(Serial.available()) Serial.read();
+  while(digitalRead(2) != LOW && !Serial.available()) {
+    digitalWrite(clkPin, HIGH);
+    delay(p/2);
+    digitalWrite(clkPin, LOW);
+    delay(p/2);
+  }
+  printMode(currentMode);
+  Serial.println("Clocking aborted.");
+}
+
 void printMode(int mode) {
   Serial.print("<");
   String s = "CONSOLE";
@@ -258,6 +313,10 @@ void printMode(int mode) {
     s = "SELECTOR";
     break;
 
+    case 4:
+    s = "CLOCK";
+    break;
+
     default:
     s = "MODE " + String(mode);
     break;
@@ -265,8 +324,3 @@ void printMode(int mode) {
   Serial.print(s);
   Serial.print("> ");
 }
-
-
-
-
-
